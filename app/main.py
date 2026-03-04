@@ -25,7 +25,7 @@ def commands(terminal_input):
             return
         match, full_path = check_executable(terminal_input[5:])
         if match:
-            print(f"{terminal_path[5:]} is {full_path}")
+            print(f"{terminal_input[5:]} is {full_path}")
         else:
             print(f"{terminal_input[5:]}: not found") 
     else:

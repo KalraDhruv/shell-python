@@ -25,15 +25,28 @@ def commands(terminal_input):
             print(terminal_input[5:])
     elif terminal_input[0:4] == "pwd " or terminal_input=="pwd":
         print(Path.cwd().resolve())
-    elif terminal_input[0:5] == "type ":
-        if terminal_input[5:] in built_in_commands:
-            print(f"{terminal_input[5:]} is a shell builtin")
-            return
-        match, full_path = check_executable(terminal_input[5:])
-        if match:
-            print(f"{terminal_input[5:]} is {full_path}")
+    elif terminal_input[0:5] == "type " or terminal_input=="type":
+        if len(terminal_input) == 4:
+            print("")
         else:
-            print(f"{terminal_input[5:]}: not found") 
+            if terminal_input[5:] in built_in_commands:
+                print(f"{terminal_input[5:]} is a shell builtin")
+                return
+            match, full_path = check_executable(terminal_input[5:])
+            if match:
+                print(f"{terminal_input[5:]} is {full_path}")
+            else:
+                print(f"{terminal_input[5:]}: not found") 
+    elif terminal_input[0:3] == "cd " or terminal_input == "cd":
+        if len(terminal_input) == 2:
+            print("")
+        else: 
+            target = Path(terminal_input[3:]).resolve() 
+            if target.is_dir():
+                os.chdir(target)
+            else: 
+                print(f"cd: {target}: No such file or directory")
+            
     else:
         individual_inputs = terminal_input.split(" ")
         match, full_path = check_executable(individual_inputs[0])

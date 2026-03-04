@@ -9,6 +9,7 @@ def commands(terminal_input):
     elif terminal_input[0:5] == "type ":
         if terminal_input[5:] in built_in_commands:
             print(f"{terminal_input[5:]} is a shell builtin")
+            return
         match = False
         path = os.environ.get('PATH')
         individual_paths = path.split(os.pathsep)

@@ -3,7 +3,7 @@ import os
 import subprocess
 from pathlib import Path
 
-built_in_commands  = ["echo", "exit", "type"]
+built_in_commands  = ["echo", "exit", "type", "pwd"]
 
 def check_executable(program):
     path = os.environ.get('PATH')

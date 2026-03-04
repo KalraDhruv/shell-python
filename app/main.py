@@ -1,4 +1,5 @@
 import sys
+import os 
 
 built_in_commands  = ["echo", "exit", "type"]
 
@@ -8,9 +9,19 @@ def commands(terminal_input):
     elif terminal_input[0:5] == "type ":
         if terminal_input[5:] in built_in_commands:
             print(f"{terminal_input[5:]} is a shell builtin")
-        else:
+        match = False
+        path = os.environ.get('PATH')
+        individual_paths = path.split(os.pathsep)
+        for path in individual_paths:
+            if not os.path.isdir(path):
+                continue
+            full_path = os.path.join(path, terminal_input[5:])
+            if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
+                print(f"{terminal_input[5:]} is {full_path}")
+                match = True
+                break
+        if not match:
             print(f"{terminal_input[5:]}: not found") 
-            
     else:
         print(f"{terminal_input}: command not found")
 

@@ -1,6 +1,7 @@
 import sys
 import os 
 import subprocess
+from pathlib import Path
 
 built_in_commands  = ["echo", "exit", "type"]
 
@@ -17,8 +18,13 @@ def check_executable(program):
 
 
 def commands(terminal_input):
-    if terminal_input[0:5] == "echo ":
-        print(terminal_input[5:])
+    if terminal_input[0:5] == "echo " or terminal_input=="echo":
+        if len(terminal_input) == 4:
+            print("")
+        else: 
+            print(terminal_input[5:])
+    elif terminal_input[0:4] == "pwd " or terminal_input=="pwd":
+        print(Path.cwd().resolve())
     elif terminal_input[0:5] == "type ":
         if terminal_input[5:] in built_in_commands:
             print(f"{terminal_input[5:]} is a shell builtin")

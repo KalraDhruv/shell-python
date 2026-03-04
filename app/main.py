@@ -41,7 +41,11 @@ def commands(terminal_input):
         if len(terminal_input) == 2:
             print("")
         else: 
-            target = Path(terminal_input[3:]).resolve() 
+            if terminal_input[3] == "~":
+                home = os.environ.get('HOME')
+                target = Path(os.path.join(home, terminal_input[5:])).resolve()
+            else:
+                target = Path(terminal_input[3:]).resolve() 
             if target.is_dir():
                 os.chdir(target)
             else: 

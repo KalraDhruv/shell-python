@@ -32,7 +32,7 @@ def commands(terminal_input):
         individual_inputs = terminal_input.split(" ")
         match, full_path = check_executable(individual_inputs[0])
         if match:
-            subprocess.run([full_path] + individual_inputs[1:])
+            subprocess.run(individual_inputs)
         else:
             print(f"{terminal_input}: command not found")
 

@@ -21,10 +21,18 @@ def tokenizer(terminal_input):
     index = 0
     in_single_quotes = False
     in_double_quotes = False
+    is_backslash = False
     is_space = False
     tokens = []
     current_token = [] 
     for char in terminal_input:
+        if is_backslash:
+            current_token.append(char)
+            is_backslash = False
+            continue
+        if char == "\\":
+            is_backslash = True
+            continue
         if char == "\"" and not in_double_quotes:
             in_double_quotes = True
             continue

@@ -36,18 +36,19 @@ def tokenizer(terminal_input):
             else:
                 is_backslash = True
             continue
-        if char == "\"" and not in_double_quotes:
-            in_double_quotes = True
-            continue
-        elif char == "\"" and in_double_quotes:
-            in_double_quotes = False
-            continue
+        if char == "\"" and not in_single_quotes:
+            if not in_double_quotes:
+                in_double_quotes = True
+                continue
+            elif in_double_quotes:
+                in_double_quotes = False
+                continue
 
         if char == "'" and not in_double_quotes:
-            if char == "'" and not in_single_quotes:
+            if not in_single_quotes:
                 in_single_quotes = True
                 continue
-            elif char == "'" and in_single_quotes:
+            elif in_single_quotes:
                 in_single_quotes = False
                 continue
         

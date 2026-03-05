@@ -25,18 +25,22 @@ def tokenizer(terminal_input):
     tokens = []
     current_token = [] 
     for char in terminal_input:
-        if char == "'" and not in_single_quotes:
-            in_single_quotes = True
-            continue
-        elif char == "'" and in_single_quotes:
-            in_single_quotes = False
-            continue
+        if char == "\"" and not in_double_quotes:
+            in_double_quotes = True
+        elif char == "\"" and in_double_quotes:
+            in_double_quotes = False
+
+        if char == "'" and not in_double_quotes:
+            if char == "'" and not in_single_quotes:
+                in_single_quotes = True
+                continue
+            elif char == "'" and in_single_quotes:
+                in_single_quotes = False
+                continue
             
-        if char != " " or in_single_quotes:
+        if char != " " or in_single_quotes or in_double_quotes:
             current_token.append(char)
             is_space = False
-        elif in_single_quotes:
-            tokens.append(current_token.append(char))
         else: 
             if is_space == False:
                 tokens.append("".join(current_token))

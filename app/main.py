@@ -17,47 +17,87 @@ def check_executable(program):
     return False, None
 
 
-def commands(terminal_input):
-    if terminal_input[0:5] == "echo " or terminal_input=="echo":
-        if len(terminal_input) == 4:
+def tokenizer(terminal_input):
+    index = 0
+    in_single_quotes = False
+    in_double_quotes = False
+    is_space = False
+    tokens = []
+    current_token = [] 
+    for char in terminal_input:
+        if char == "'" and not in_single_quotes:
+            in_single_quotes = True
+            continue
+        elif char == "'" and in_single_quotes:
+            in_single_quotes = False
+            continue
+            
+        if char != " " or in_single_quotes:
+            current_token.append(char)
+            is_space = False
+        elif in_single_quotes:
+            tokens.append(current_token.append(char))
+        else: 
+            if is_space == False:
+                tokens.append("".join(current_token))
+                current_token = []
+            is_space = True
+            continue
+    if len(current_token) > 0:
+        tokens.append("".join(current_token))
+    return tokens
+
+
+def commands(tokens):
+    if len(tokens) == 0:
+        print("")
+        return
+    if tokens[0]  == "echo":
+        if len(tokens) == 1:
             print("")
         else: 
-            print(terminal_input[5:])
-    elif terminal_input[0:4] == "pwd " or terminal_input=="pwd":
+            print(" ".join(tokens[1:]))
+    elif tokens[0] == "pwd":
         print(Path.cwd().resolve())
-    elif terminal_input[0:5] == "type " or terminal_input=="type":
-        if len(terminal_input) == 4:
+    elif tokens[0] == "type":
+        if len(tokens) == 1:
             print("")
         else:
-            if terminal_input[5:] in built_in_commands:
-                print(f"{terminal_input[5:]} is a shell builtin")
-                return
-            match, full_path = check_executable(terminal_input[5:])
-            if match:
-                print(f"{terminal_input[5:]} is {full_path}")
-            else:
-                print(f"{terminal_input[5:]}: not found") 
-    elif terminal_input[0:3] == "cd " or terminal_input == "cd":
-        if len(terminal_input) == 2:
-            print("")
+            for token in tokens[1:]:
+                if token in built_in_commands:
+                    print(f"{token} is a shell builtin")
+                    return
+                match, full_path = check_executable(token)
+                if match:
+                    print(f"{token} is {full_path}")
+                else:
+                    print(f"{token}: not found") 
+    elif tokens[0] == "cd":
+        if len(tokens) == 1:
+            target = Path(os.environ.get('HOME'))
         else: 
-            if terminal_input[3] == "~":
+            if tokens[1][0] == "~":
+                target = os.environ.get('HOME')
+            elif tokens[1].startswith("~/"):
                 home = os.environ.get('HOME')
-                target = Path(os.path.join(home, terminal_input[5:])).resolve()
+                target = os.path.join(home, tokens[1][2:])  
             else:
-                target = Path(terminal_input[3:]).resolve() 
-            if target.is_dir():
-                os.chdir(target)
-            else: 
-                print(f"cd: {target}: No such file or directory")
+                target = Path(tokens[1]) 
+
+            try:
+                if target.resolve().exists() and target.resolve().is_dir():
+                    os.chdir(target.resolve())
+                else: 
+                    print(f"cd: {tokens[1]}: No such file or directory")
+            except Exception:
+                print(f"cd: {tokens[1]}: No such file or directory")
             
     else:
-        individual_inputs = terminal_input.split(" ")
-        match, full_path = check_executable(individual_inputs[0])
+        match, full_path = check_executable(tokens[0])
         if match:
-            subprocess.run(individual_inputs)
+            subprocess.run(tokens)
         else:
-            print(f"{terminal_input}: command not found")
+            print(f"{tokens[0]}: command not found")
 
 
 
@@ -70,7 +110,7 @@ def main():
         if terminal_input == "exit":
             break
         else: 
-            commands(terminal_input)
+            commands(tokenizer(terminal_input))
     pass
 
 

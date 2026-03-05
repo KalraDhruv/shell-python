@@ -31,7 +31,10 @@ def tokenizer(terminal_input):
             is_backslash = False
             continue
         if char == "\\":
-            is_backslash = True
+            if in_single_quotes:
+                current_token.append(char)
+            else:
+                is_backslash = True
             continue
         if char == "\"" and not in_double_quotes:
             in_double_quotes = True

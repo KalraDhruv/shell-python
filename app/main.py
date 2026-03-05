@@ -74,22 +74,20 @@ def commands(tokens):
                     print(f"{token}: not found") 
     elif tokens[0] == "cd":
         if len(tokens) == 1:
-            target = Path(os.environ.get('HOME'))
+            target = os.environ.get('HOME')
+            os.chdir(target)
         else: 
+            target = None
             if tokens[1][0] == "~":
-                target = os.environ.get('HOME')
-            elif tokens[1].startswith("~/"):
                 home = os.environ.get('HOME')
-                target = os.path.join(home, tokens[1][2:])  
+                target = Path(os.path.join(home, tokens[1][2:])).resolve()
+            
             else:
-                target = Path(tokens[1]) 
+                target = Path(tokens[1]).resolve()
 
-            try:
-                if target.resolve().exists() and target.resolve().is_dir():
-                    os.chdir(target.resolve())
-                else: 
-                    print(f"cd: {tokens[1]}: No such file or directory")
-            except Exception:
+            if target.resolve().is_dir():
+                os.chdir(target.resolve())
+            else: 
                 print(f"cd: {tokens[1]}: No such file or directory")
             
     else:

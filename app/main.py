@@ -23,13 +23,28 @@ def tokenizer(terminal_input):
     in_double_quotes = False
     is_backslash = False
     is_space = False
+    one_encountered_for_redirect = False
     tokens = []
     current_token = [] 
     for char in terminal_input:
+
         if is_backslash:
             current_token.append(char)
             is_backslash = False
             continue
+        if char == "1" and not in_single_quotes and not in_double_quotes:
+            one_encountered_for_redirect = True
+            continue
+        if (one_encountered_for_redirect and char == ">") or char == ">":
+            one_encountered_for_redirect = False
+            tokens.append("".join(current_token))
+            current_token = []
+            tokens.append(">")
+            continue
+        elif one_encountered_for_redirect and char != ">":
+            one_encountered_for_redirect = False
+            current_token.append("1")
+
         if char == "\\":
             if in_single_quotes:
                 current_token.append(char)
@@ -70,29 +85,41 @@ def tokenizer(terminal_input):
 
 
 def commands(tokens):
+    print(tokens)
+    value = None
+    redirect = False
     if len(tokens) == 0:
         print("")
         return
+    if '>' in tokens: 
+        redirect = True
+        output_index = tokens.index('>') + 1
+        if output_index < len(tokens):
+            output_file = tokens[output_index]
+            tokens = tokens[:tokens.index('>')] + tokens[output_index + 1:]
+        
     if tokens[0]  == "echo":
         if len(tokens) == 1:
-            print("")
+            value = ""
         else: 
-            print(" ".join(tokens[1:]))
+            value = " ".join(tokens[1:])
     elif tokens[0] == "pwd":
-        print(Path.cwd().resolve())
+        value = Path.cwd().resolve()
     elif tokens[0] == "type":
         if len(tokens) == 1:
-            print("")
+            value = ""
         else:
+            value = []
             for token in tokens[1:]:
                 if token in built_in_commands:
-                    print(f"{token} is a shell builtin")
+                    value.append(f"{token} is a shell builtin")
                     return
                 match, full_path = check_executable(token)
                 if match:
-                    print(f"{token} is {full_path}")
+                    value.append(f"{token} is {full_path}")
                 else:
-                    print(f"{token}: not found") 
+                    value.append(f"{token}: not found") 
+            value = "\n".join(value)
     elif tokens[0] == "cd":
         if len(tokens) == 1:
             target = os.environ.get('HOME')
@@ -116,7 +143,12 @@ def commands(tokens):
         if match:
             subprocess.run(tokens)
         else:
-            print(f"{tokens[0]}: command not found")
+            value = (f"{tokens[0]}: command not found")
+    if redirect: 
+        with open(output_file, 'w') as file:
+            file.write(value)
+    else:
+        print(value)
 
 
 

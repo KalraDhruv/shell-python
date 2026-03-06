@@ -159,7 +159,7 @@ def commands(tokens):
 def main():
     # TODO: Uncomment the code below to pass the first stage
     while True:
-        sys.stdout.write("$ ")
+        sys.stdout.write("$")
         terminal_input = input()
         terminal_input = terminal_input.strip()
         if terminal_input == "exit":

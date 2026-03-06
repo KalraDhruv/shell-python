@@ -141,7 +141,8 @@ def commands(tokens):
     else:
         match, full_path = check_executable(tokens[0])
         if match:
-            subprocess.run(tokens)
+            result = subprocess.run(tokens, capture_output=True, text=True)
+            value = result.stdout
         else:
             value = (f"{tokens[0]}: command not found")
     if redirect: 

@@ -147,7 +147,7 @@ def commands(tokens):
             value = (f"{tokens[0]}: command not found")
     if redirect: 
         with open(output_file, 'w') as file:
-            file.write(value)
+            file.write(str(value))
     else:
         print(value)
 

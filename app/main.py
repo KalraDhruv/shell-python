@@ -85,7 +85,6 @@ def tokenizer(terminal_input):
 
 
 def commands(tokens):
-    print(tokens)
     value = None
     redirect = False
     if len(tokens) == 0:

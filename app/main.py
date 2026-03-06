@@ -37,7 +37,8 @@ def tokenizer(terminal_input):
             continue
         if (one_encountered_for_redirect and char == ">") or char == ">":
             one_encountered_for_redirect = False
-            tokens.append("".join(current_token))
+            if len(current_token)!=0:
+                tokens.append("".join(current_token))
             current_token = []
             tokens.append(">")
             continue
@@ -85,6 +86,7 @@ def tokenizer(terminal_input):
 
 
 def commands(tokens):
+    print(tokens)
     value = None
     redirect = False
     if len(tokens) == 0:

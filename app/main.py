@@ -96,7 +96,7 @@ def commands(tokens):
         output_index = tokens.index('>') + 1
         if output_index < len(tokens):
             output_file = tokens[output_index]
-            tokens = tokens[:tokens.index('>')] + tokens[output_index + 1:]
+            tokens = tokens[:tokens.index('>')] 
         
     if tokens[0]  == "echo":
         if len(tokens) == 1:

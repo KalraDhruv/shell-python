@@ -143,15 +143,16 @@ def commands(tokens):
         if match:
             result = subprocess.run(tokens, capture_output=True, text=True)
             value = result.stdout
+            if value.endswith('\n'):
+                value = value[:-1]
         else:
             value = (f"{tokens[0]}: command not found")
-    if redirect: 
-        with open(output_file, 'w') as file:
-            file.write(value)
-    else:
-        if value == None:
-            return
-        print(value)
+    if value is not None:
+        if redirect: 
+            with open(output_file, 'w') as file:
+                file.write(value)
+        else:
+            print(value)
 
 
 

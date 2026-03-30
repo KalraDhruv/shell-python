@@ -30,6 +30,11 @@ def tokenizer(line):
 
         # Check for 1> or 2> redirect prefixes
         if char in ("1", "2") and not in_single and not in_double and not current:
+            if i + 2 < len(line) and line[i + 1:i + 3 ] == ">>":
+                tokens.append(f"{char}>>")
+                i += 3
+                continue
+
             if i + 1 < len(line) and line[i + 1] == ">":
                 tokens.append(f"{char}>")
                 i += 2
@@ -42,7 +47,11 @@ def tokenizer(line):
         elif char == "'" and not in_double:
             in_single = not in_single
         elif char == ">" and not in_single and not in_double:
-            tokens.append(">")
+            if i + 1 < len(line) and line[i + 1] == ">":
+                tokens.append(f">>")
+                i += 2
+            else:
+                tokens.append(">")
         elif char == " " and not in_single and not in_double:
             if current:
                 tokens.append("".join(current))
@@ -74,19 +83,33 @@ def write_file(path, text):
 
 def commands(tokens):
     # Parse redirects
-    tokens, stderr_file = get_redirect(tokens, "2>")
-    tokens, stdout_file1= get_redirect(tokens, ">")
-    tokens, stdout_file2 = get_redirect(tokens, "1>")
-    stdout_file = stdout_file1 or stdout_file2
-
+    tokens, write_stderr_file = get_redirect(tokens, "2>")
+    tokens, write_stdout_file1 = get_redirect(tokens, ">")
+    tokens, write_stdout_file2 = get_redirect(tokens, "1>")
+    tokens, append_stderr_file = get_redirect(tokens, "2>>")
+    tokens, append_stdout_file1 = get_redirect(tokens, ">>")
+    tokens, append_stdout_file2 = get_redirect(tokens, "1>>")
+    
+    write_stdout_file = write_stdout_file1 or write_stdout_file2
+    append_stdout_file = append_stdout_file1 or append_stdout_file2
+    
     if not tokens:
         return
 
     # Always create redirect files upfront (even if nothing gets written to them)
-    if stdout_file:
-        open(stdout_file, "w").close()
-    if stderr_file:
-        open(stderr_file, "w").close()
+    if write_stdout_file:
+        open(write_stdout_file, "w").close()
+    if append_stdout_file:
+        open(append_stdout_file, "a").close()
+    if write_stderr_file:
+        open(write_stderr_file, "w").close()
+    if append_stderr_file:
+        open(append_stderr_file, "a").close()
+
+    stderr_file = write_stderr_file or append_stderr_file
+    stdout_file = write_stdout_file or append_stdout_file
+
+
 
     cmd = tokens[0]
     value_stdout = None
@@ -99,13 +122,15 @@ def commands(tokens):
         value_stdout = Path.cwd().resolve()
 
     elif cmd == "type":
+        results = []
         for token in tokens[1:]:
             if token in BUILTINS:
-                value_stdout = f"{token} is a shell builtin"
+                results.append(f"{token} is a shell builtin")
             elif (path := check_executable(token)):
-                value_stdout = f"{token} is {path}"
+                results.append(f"{token} is {path}")
             else:
                 value_stderr = f"{token}: not found"
+        value_stdout = "\n".join(results) if results else None
 
     elif cmd == "cd":
         target = os.environ.get("HOME", "") if len(tokens) == 1 else tokens[1]

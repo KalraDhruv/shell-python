@@ -1,5 +1,6 @@
 import sys
 import os
+import readline
 import subprocess
 from pathlib import Path
 
@@ -163,11 +164,20 @@ def commands(tokens):
         else:
             print(value_stderr, file=sys.stderr)
 
+def completer(text, state):
+    options = [cmd for cmd in BUILTINS if cmd.startswith(text)]
+    if state < len(options):
+        return options[state]+ " "
+    else: 
+        return None
+
 
 
 
 
 def main():
+    readline.parse_and_bind("tab:complete")
+    readline.set_completer(completer)
     while True:
         sys.stdout.write("$ ")
         sys.stdout.flush()

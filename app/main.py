@@ -1,174 +1,155 @@
 import sys
-import os 
+import os
 import subprocess
 from pathlib import Path
 
-built_in_commands  = ["echo", "exit", "type", "pwd"]
+BUILTINS = {"echo", "exit", "type", "pwd", "cd"}
+
 
 def check_executable(program):
-    path = os.environ.get('PATH')
-    individual_paths = path.split(os.pathsep)
-    for path in individual_paths:
-        if not os.path.isdir(path):
-            continue
-        full_path = os.path.join(path, program)
-        if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
-            return True, full_path
-    return False, None
+    for dir_ in os.environ.get("PATH", "").split(os.pathsep):
+        full = os.path.join(dir_, program)
+        if os.path.isfile(full) and os.access(full, os.X_OK):
+            return full
+    return None
 
 
-def tokenizer(terminal_input):
-    index = 0
-    in_single_quotes = False
-    in_double_quotes = False
-    is_backslash = False
-    is_space = False
-    one_encountered_for_redirect = False
-    tokens = []
-    current_token = [] 
-    for char in terminal_input:
+def tokenizer(line):
+    tokens, current = [], []
+    in_single = in_double = is_backslash = False
+
+    i = 0
+    while i < len(line):
+        char = line[i]
 
         if is_backslash:
-            current_token.append(char)
+            current.append(char)
             is_backslash = False
+            i += 1
             continue
-        if char == "1" and not in_single_quotes and not in_double_quotes and len(current_token) == 0:
-            one_encountered_for_redirect = True
-            continue
-        if (one_encountered_for_redirect and char == ">") or char == ">":
-            one_encountered_for_redirect = False
-            #if len(current_token) != 0:
-            #    tokens.append("".join(current_token))
-            #     current_token = []
+
+        # Check for 1> or 2> redirect prefixes
+        if char in ("1", "2") and not in_single and not in_double and not current:
+            if i + 1 < len(line) and line[i + 1] == ">":
+                tokens.append(f"{char}>")
+                i += 2
+                continue
+
+        if char == "\\" and not in_single:
+            is_backslash = True
+        elif char == '"' and not in_single:
+            in_double = not in_double
+        elif char == "'" and not in_double:
+            in_single = not in_single
+        elif char == ">" and not in_single and not in_double:
             tokens.append(">")
-            continue
-        elif one_encountered_for_redirect and char != ">":
-            one_encountered_for_redirect = False
-            current_token.append("1")
+        elif char == " " and not in_single and not in_double:
+            if current:
+                tokens.append("".join(current))
+                current = []
+        else:
+            current.append(char)
 
-        if char == "\\":
-            if in_single_quotes:
-                current_token.append(char)
-            else:
-                is_backslash = True
-            continue
-        if char == "\"" and not in_single_quotes:
-            if not in_double_quotes:
-                in_double_quotes = True
-                continue
-            elif in_double_quotes:
-                in_double_quotes = False
-                continue
+        i += 1
 
-        if char == "'" and not in_double_quotes:
-            if not in_single_quotes:
-                in_single_quotes = True
-                continue
-            elif in_single_quotes:
-                in_single_quotes = False
-                continue
-        
-            
-        if char != " ":
-            current_token.append(char)
-            is_space = False
-        elif in_double_quotes or in_single_quotes:
-            current_token.append(char)
-        else: 
-            if is_space == False:
-                tokens.append("".join(current_token))
-                current_token = []
-            is_space = True
-            continue
-    if len(current_token) > 0:
-        tokens.append("".join(current_token))
+    if current:
+        tokens.append("".join(current))
     return tokens
 
 
-def commands(tokens):
-    value = None
-    redirect = False
-    if len(tokens) == 0:
-        print("")
-        return
-    if '>' in tokens: 
-        redirect = True
-        output_index = tokens.index('>') + 1
-        if output_index < len(tokens):
-            output_file = tokens[output_index]
-            tokens = tokens[:tokens.index('>')] 
-        
-    if tokens[0]  == "echo":
-        if len(tokens) == 1:
-            value = ""
-        else: 
-            value = " ".join(tokens[1:])
-    elif tokens[0] == "pwd":
-        value = Path.cwd().resolve()
-    elif tokens[0] == "type":
-        if len(tokens) == 1:
-            value = ""
-        else:
-            value = []
-            for token in tokens[1:]:
-                if token in built_in_commands:
-                    value.append(f"{token} is a shell builtin")
-                    continue
-                match, full_path = check_executable(token)
-                if match:
-                    value.append(f"{token} is {full_path}")
-                else:
-                    value.append(f"{token}: not found") 
-            value = "\n".join(value)
-    elif tokens[0] == "cd":
-        if len(tokens) == 1:
-            target = os.environ.get('HOME')
-            os.chdir(target)
-        else: 
-            target = None
-            if tokens[1][0] == "~":
-                home = os.environ.get('HOME')
-                target = Path(os.path.join(home, tokens[1][2:])).resolve()
-            
-            else:
-                target = Path(tokens[1]).resolve()
+def get_redirect(tokens, symbol):
+    """Extract redirect file for a given symbol, return (cleaned_tokens, filepath_or_None)."""
+    if symbol in tokens:
+        idx = tokens.index(symbol)
+        if idx + 1 < len(tokens):
+            return tokens[:idx], tokens[idx + 1]
+    return tokens, None
 
-            if target.resolve().is_dir():
-                os.chdir(target.resolve())
-            else: 
-                print(f"cd: {tokens[1]}: No such file or directory")
-            
+
+def write_file(path, text):
+    with open(path, "a") as f:
+        text = str(text)
+        f.write(text if text.endswith("\n") else text + "\n")
+
+
+def commands(tokens):
+    # Parse redirects
+    tokens, stderr_file = get_redirect(tokens, "2>")
+    tokens, stdout_file1= get_redirect(tokens, ">")
+    tokens, stdout_file2 = get_redirect(tokens, "1>")
+    stdout_file = stdout_file1 or stdout_file2
+
+    if not tokens:
+        return
+
+    # Always create redirect files upfront (even if nothing gets written to them)
+    if stdout_file:
+        open(stdout_file, "w").close()
+    if stderr_file:
+        open(stderr_file, "w").close()
+
+    cmd = tokens[0]
+    value_stdout = None
+    value_stderr = None
+
+    if cmd == "echo":
+        value_stdout = " ".join(tokens[1:])
+
+    elif cmd == "pwd":
+        value_stdout = Path.cwd().resolve()
+
+    elif cmd == "type":
+        for token in tokens[1:]:
+            if token in BUILTINS:
+                value_stdout = f"{token} is a shell builtin"
+            elif (path := check_executable(token)):
+                value_stdout = f"{token} is {path}"
+            else:
+                value_stderr = f"{token}: not found"
+
+    elif cmd == "cd":
+        target = os.environ.get("HOME", "") if len(tokens) == 1 else tokens[1]
+        if target.startswith("~"):
+            target = os.path.join(os.environ.get("HOME", ""), target[2:])
+        target = Path(target).resolve()
+        if target.is_dir():
+            os.chdir(target)
+        else:
+            value_stderr = f"cd: {tokens[1]}: No such file or directory"
+
     else:
-        match, full_path = check_executable(tokens[0])
-        if match:
+        path = check_executable(cmd)
+        if path:
             result = subprocess.run(tokens, capture_output=True, text=True)
+            if result.stdout:
+                value_stdout = result.stdout.rstrip("\n")
             if result.stderr:
-                sys.stderr.write(result.stderr)
-            value = result.stdout
-            if value.endswith('\n'):
-                value = value[:-1]
+                value_stderr = result.stderr.rstrip("\n")
         else:
-            value = (f"{tokens[0]}: command not found")
-    if value is not None:
-        if redirect: 
-            with open(output_file, 'w') as file:
-                file.write(value)
+            value_stderr = f"{cmd}: command not found"
+    if value_stdout:
+        if stdout_file:
+            write_file(stdout_file, value_stdout)
         else:
-            print(value)
+            print(value_stdout)
+    if value_stderr:
+        if stderr_file:
+            write_file(stderr_file, value_stderr)
+        else:
+            print(value_stderr, file=sys.stderr)
+
+
 
 
 
 def main():
-    # TODO: Uncomment the code below to pass the first stage
     while True:
         sys.stdout.write("$ ")
-        terminal_input = input()
-        terminal_input = terminal_input.strip()
-        if terminal_input == "exit":
+        sys.stdout.flush()
+        line = input().strip()
+        if line == "exit":
             break
-        else: 
-            commands(tokenizer(terminal_input))
-    pass
+        commands(tokenizer(line))
 
 
 if __name__ == "__main__":

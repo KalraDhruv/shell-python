@@ -32,7 +32,7 @@ def tokenizer(terminal_input):
             current_token.append(char)
             is_backslash = False
             continue
-        if char == "1" and not in_single_quotes and not in_double_quotes:
+        if char == "1" and not in_single_quotes and not in_double_quotes and len(current_token) == 0:
             one_encountered_for_redirect = True
             continue
         if (one_encountered_for_redirect and char == ">") or char == ">":
@@ -113,7 +113,7 @@ def commands(tokens):
             for token in tokens[1:]:
                 if token in built_in_commands:
                     value.append(f"{token} is a shell builtin")
-                    return
+                    continue
                 match, full_path = check_executable(token)
                 if match:
                     value.append(f"{token} is {full_path}")
@@ -142,6 +142,8 @@ def commands(tokens):
         match, full_path = check_executable(tokens[0])
         if match:
             result = subprocess.run(tokens, capture_output=True, text=True)
+            if result.stderr:
+                sys.stderr.write(result.stderr)
             value = result.stdout
             if value.endswith('\n'):
                 value = value[:-1]
@@ -159,7 +161,7 @@ def commands(tokens):
 def main():
     # TODO: Uncomment the code below to pass the first stage
     while True:
-        sys.stdout.write("$")
+        sys.stdout.write("$ ")
         terminal_input = input()
         terminal_input = terminal_input.strip()
         if terminal_input == "exit":

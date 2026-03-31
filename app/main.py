@@ -298,10 +298,17 @@ def main():
     readline.parse_and_bind("tab:complete")
     readline.set_completer(completer)
     readline.set_completer_delims(" \t\n")
+    history = []
     while True:
         line = input("$ ").strip()
+        history.append(line)
         if line == "exit":
             break
+        if line == "history":
+            for i, cmd in enumerate(history):
+                print(f"   {i}  {cmd}" )
+            continue
+        
         tokens = tokenizer(line)
         pipeline = helper_pipeline(tokens)
         if len(pipeline) > 1:

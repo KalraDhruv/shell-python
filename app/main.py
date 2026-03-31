@@ -4,7 +4,7 @@ import readline
 import subprocess
 from pathlib import Path
 
-BUILTINS = {"echo", "exit", "type", "pwd", "cd"}
+BUILTINS = {"echo", "exit", "type", "pwd", "cd", "history"}
 
 def get_path_executables():
     path_str = os.environ.get("PATH", "")

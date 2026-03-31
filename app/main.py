@@ -65,7 +65,15 @@ def tokenizer(line):
             in_double = not in_double
         elif char == "'" and not in_double:
             in_single = not in_single
+        elif char == "|" and not in_single and not in_double:
+            if current:
+                tokens.append("".join(current))
+                current = []
+            tokens.append("|")
         elif char == ">" and not in_single and not in_double:
+            if current:
+                tokens.append("".join(current))
+                current = []
             if i + 1 < len(line) and line[i + 1] == ">":
                 tokens.append(f">>")
                 i += 2
@@ -85,8 +93,26 @@ def tokenizer(line):
     return tokens
 
 
+def helper_pipeline(tokens):
+    result = []
+    current_list = []
+
+    for token in tokens:
+        if token == "|":
+            result.append(current_list)
+            current_list = []
+        else:
+            current_list.append(token)
+
+    if current_list:
+        result.append(current_list)
+
+    return result
+
+
+
+
 def get_redirect(tokens, symbol):
-    """Extract redirect file for a given symbol, return (cleaned_tokens, filepath_or_None)."""
     if symbol in tokens:
         idx = tokens.index(symbol)
         if idx + 1 < len(tokens):
@@ -99,7 +125,57 @@ def write_file(path, text):
         text = str(text)
         f.write(text if text.endswith("\n") else text + "\n")
 
+def run_pipeline(pipeline):
+    prev_read_fd = None
+    pids = []
 
+    for i, command_list in enumerate(pipeline):
+        is_last = (i == len(pipeline) - 1)
+        
+        if is_last:
+            read_fd, write_fd = None, None
+        else:
+            read_fd, write_fd = os.pipe()
+
+        pid = os.fork()
+
+        if pid == 0:
+            # Wire up stdin from previous stage
+            if prev_read_fd is not None:
+                os.dup2(prev_read_fd, 0)
+                os.close(prev_read_fd)
+
+            # Wire up stdout to next stage (not for last command)
+            if write_fd is not None:
+                os.dup2(write_fd, 1)
+                os.close(write_fd)
+            if read_fd is not None:
+                os.close(read_fd)
+
+            # Try execvp first for external commands
+            executable = check_executable(command_list[0])
+            if executable:
+                os.execvp(executable, command_list)
+
+            # Fall back to commands() for builtins
+            commands(command_list)
+            sys.exit(0)
+
+        else:
+            pids.append(pid)
+            if write_fd is not None:
+                os.close(write_fd)
+            if prev_read_fd is not None:
+                os.close(prev_read_fd)
+            if read_fd is not None:
+                prev_read_fd = read_fd
+
+    # Wait for all children
+    for pid in pids:
+        try:
+            os.waitpid(pid, 0)
+        except ChildProcessError:
+            pass
 
 def commands(tokens):
     # Parse redirects
@@ -109,7 +185,7 @@ def commands(tokens):
     tokens, append_stderr_file = get_redirect(tokens, "2>>")
     tokens, append_stdout_file1 = get_redirect(tokens, ">>")
     tokens, append_stdout_file2 = get_redirect(tokens, "1>>")
-    
+   
     write_stdout_file = write_stdout_file1 or write_stdout_file2
     append_stdout_file = append_stdout_file1 or append_stdout_file2
     
@@ -172,6 +248,7 @@ def commands(tokens):
                 value_stderr = result.stderr.rstrip("\n")
         else:
             value_stderr = f"{cmd}: command not found"
+
     if value_stdout:
         if stdout_file:
             write_file(stdout_file, value_stdout)
@@ -225,7 +302,12 @@ def main():
         line = input("$ ").strip()
         if line == "exit":
             break
-        commands(tokenizer(line))
+        tokens = tokenizer(line)
+        pipeline = helper_pipeline(tokens)
+        if len(pipeline) > 1:
+            run_pipeline(pipeline)
+        else:
+            commands(tokens)
 
 if __name__ == "__main__":
     main()

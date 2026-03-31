@@ -6,6 +6,24 @@ from pathlib import Path
 
 BUILTINS = {"echo", "exit", "type", "pwd", "cd"}
 
+def get_path_executables():
+    path_str = os.environ.get("PATH", "")
+    directories = path_str.split(os.pathsep)
+    executables = set()
+
+    for directory in directories:
+        if os.path.isdir(directory):
+            try: 
+                for filename in os.listdir(directory):
+                    filepath = os.path.join(directory, filename)
+                    
+                    if os.path.isfile(filepath) and os.access(filepath, os.X_OK):
+                        executables.add(filename)
+
+            except PermissionError:
+                continue
+    return list(executables)
+
 
 def check_executable(program):
     for dir_ in os.environ.get("PATH", "").split(os.pathsep):
@@ -80,6 +98,7 @@ def write_file(path, text):
     with open(path, "a") as f:
         text = str(text)
         f.write(text if text.endswith("\n") else text + "\n")
+
 
 
 def commands(tokens):
@@ -165,7 +184,11 @@ def commands(tokens):
             print(value_stderr, file=sys.stderr)
 
 def completer(text, state):
-    options = [cmd for cmd in BUILTINS if cmd.startswith(text)]
+    # For optimization implement it such that it's run once at startup 
+    # and whenever there's a "PATH=" in the command add the new customs from
+    # the given new directories.
+    customs = get_path_executables()
+    options = [cmd for cmd in BUILTINS | set(customs) if cmd.startswith(text)]
     if state < len(options):
         return options[state]+ " "
     else: 

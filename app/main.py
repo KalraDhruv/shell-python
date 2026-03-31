@@ -207,8 +207,13 @@ def completer(text, state):
 
         if state < len(options_filename):
             if dir_path == ".":
+                if os.path.isdir(os.path.join(dir_path, options_filename[state])):
+                    return options_filename[state] + "/"
                 return options_filename[state] + " "
-            return dir_path + "/" + options_filename[state] + " "
+            if os.path.isdir(os.path.join(dir_path, options_filename[state])):
+                return dir_path + "/" + options_filename[state] + "/"
+            else:
+                return dir_path + "/" + options_filename[state] + " "
         else:
             return None
 

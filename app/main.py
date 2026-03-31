@@ -187,32 +187,40 @@ def completer(text, state):
     # For optimization implement it such that it's run once at startup 
     # and whenever there's a "PATH=" in the command add the new customs from
     # the given new directories.
-    customs = get_path_executables()
-    options_commands = [cmd for cmd in BUILTINS | set(customs) if cmd.startswith(text)]
-    options_filename = [file for file in os.listdir(".") if file.startswith(text)]
+    
     if readline.get_begidx() == 0:
+        customs = get_path_executables()
+        options_commands = [cmd for cmd in BUILTINS | set(customs) if cmd.startswith(text)]
+
         if state < len(options_commands):
             return options_commands[state] + " "
         else: 
             return None
+
     else:
+        if "/" in text:
+            dir_path, prefix = text.rsplit("/", 1)
+        else: 
+            dir_path, prefix = ".", text
+
+        options_filename = [file for file in os.listdir(dir_path) if file.startswith(prefix)]
+
         if state < len(options_filename):
-            return options_filename[state] + " "
+            if dir_path == ".":
+                return options_filename[state] + " "
+            return dir_path + "/" + options_filename[state] + " "
         else:
             return None
-
-
-
 
 def main():
     readline.parse_and_bind("tab:complete")
     readline.set_completer(completer)
+    readline.set_completer_delims(" \t\n")
     while True:
         line = input("$ ").strip()
         if line == "exit":
             break
         commands(tokenizer(line))
-
 
 if __name__ == "__main__":
     main()

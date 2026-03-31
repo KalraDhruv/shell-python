@@ -202,9 +202,7 @@ def main():
     readline.parse_and_bind("tab:complete")
     readline.set_completer(completer)
     while True:
-        sys.stdout.write("$ ")
-        sys.stdout.flush()
-        line = input().strip()
+        line = input("$ ").strip()
         if line == "exit":
             break
         commands(tokenizer(line))

@@ -301,15 +301,21 @@ def main():
     history = []
     while True:
         line = input("$ ").strip()
+        tokens = tokenizer(line)
         history.append(line)
+
         if line == "exit":
             break
-        if line == "history":
-            for i, cmd in enumerate(history):
-                print(f"   {i}  {cmd}" )
-            continue
+        if tokens[0] == "history":
+            if len(tokens) == 2: 
+                for i in range(len(history) - int(tokens[1]), len(history)):
+                    print(f"   {i}  {history[i]}" )
+                continue
+            else:
+                for i, cmd in enumerate(history):
+                    print(f"   {i}  {cmd}" )
+                continue
         
-        tokens = tokenizer(line)
         pipeline = helper_pipeline(tokens)
         if len(pipeline) > 1:
             run_pipeline(pipeline)

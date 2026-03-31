@@ -188,12 +188,18 @@ def completer(text, state):
     # and whenever there's a "PATH=" in the command add the new customs from
     # the given new directories.
     customs = get_path_executables()
-    options = [cmd for cmd in BUILTINS | set(customs) if cmd.startswith(text)]
-    if state < len(options):
-        return options[state]+ " "
-    else: 
-        return None
-
+    options_commands = [cmd for cmd in BUILTINS | set(customs) if cmd.startswith(text)]
+    options_filename = [file for file in os.listdir(".") if file.startswith(text)]
+    if readline.get_begidx() == 0:
+        if state < len(options_commands):
+            return options_commands[state] + " "
+        else: 
+            return None
+    else:
+        if state < len(options_filename):
+            return options_filename[state] + " "
+        else:
+            return None
 
 
 
